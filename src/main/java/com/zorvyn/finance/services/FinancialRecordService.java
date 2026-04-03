@@ -30,10 +30,6 @@ public class FinancialRecordService {
     public FinancialRecordResponse createRecord(FinancialRecordCreateRequest request) {
         User user = currentUserService.getCurrentUser();
 
-        if (user.getRole() != Role.ADMIN) {
-            throw new ForbiddenException("Only admins can create financial records");
-        }
-
         FinancialRecord record = new FinancialRecord();
         record.setAmount(request.amount());
         record.setType(request.type());
@@ -50,10 +46,6 @@ public class FinancialRecordService {
     @Transactional
     public FinancialRecordResponse updateRecord(Long id, FinancialRecordUpdateRequest updated) {
         User user = currentUserService.getCurrentUser();
-
-        if (user.getRole() != Role.ADMIN) {
-            throw new ForbiddenException("Only admins can update financial records");
-        }
 
         FinancialRecord record = repository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Record not found"));
@@ -78,10 +70,6 @@ public class FinancialRecordService {
     @Transactional
     public void deleteRecord(Long id) {
         User user = currentUserService.getCurrentUser();
-
-        if (user.getRole() != Role.ADMIN) {
-            throw new ForbiddenException("Only admins can delete financial records");
-        }
 
         FinancialRecord record = repository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Record not found"));

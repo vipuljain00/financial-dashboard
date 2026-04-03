@@ -40,7 +40,7 @@ public class FinancialRecordController {
     }
 
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('RECORD_CREATE')")
     @Operation(summary = "Create a financial record (ADMIN only, createdBy set to current admin)")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Created"),
@@ -80,7 +80,7 @@ public class FinancialRecordController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('RECORD_UPDATE')")
     @Operation(summary = "Update a financial record by id (ADMIN can only update their own records)")
     public FinancialRecordResponse update(@PathVariable Long id,
             @Valid @RequestBody FinancialRecordUpdateRequest request) {
@@ -88,7 +88,7 @@ public class FinancialRecordController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('RECORD_DELETE')")
     @Operation(summary = "Delete a financial record by id (permanent delete, ADMIN can only delete their own records)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "OK", content = @Content),
