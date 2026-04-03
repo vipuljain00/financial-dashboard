@@ -102,10 +102,6 @@ public class FinancialRecordService {
     public FinancialRecordResponse getRecord(Long id) {
         User user = currentUserService.getCurrentUser();
 
-        if (user.getRole() == Role.VIEWER) {
-            throw new ForbiddenException("Viewers are not allowed to view financial records");
-        }
-
         FinancialRecord record = repository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Record not found"));
 
@@ -137,10 +133,6 @@ public class FinancialRecordService {
     @Transactional(readOnly = true)
     public Page<FinancialRecordResponse> listRecords(FinancialRecordFilter filter, Pageable pageable) {
         User user = currentUserService.getCurrentUser();
-
-        if (user.getRole() == Role.VIEWER) {
-            throw new ForbiddenException("Viewers are not allowed to list financial records");
-        }
 
         // Visibility:
         // - Admin: only records created by themselves
@@ -179,7 +171,6 @@ public class FinancialRecordService {
                 createdById,
                 record.getStatus(),
                 record.getDateCreated(),
-                record.getDateUpdated()
-        );
+                record.getDateUpdated());
     }
 }

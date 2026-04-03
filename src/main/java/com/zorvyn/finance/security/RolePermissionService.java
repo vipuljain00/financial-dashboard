@@ -19,17 +19,14 @@ public class RolePermissionService {
 
     private Set<String> getViewerPermissions() {
         return Set.of(
-                Permission.RECORD_READ.toString(),
-                Permission.SUMMARY_READ.toString()
-        );
+                Permission.SUMMARY_READ.toString());
     }
 
     private Set<String> getAnalystPermissions() {
         return Set.of(
                 Permission.RECORD_READ.toString(),
                 Permission.SUMMARY_READ.toString(),
-                Permission.ANALYTICS_READ.toString()
-        );
+                Permission.ANALYTICS_READ.toString());
     }
 
     private Set<String> getAdminPermissions() {
@@ -40,4 +37,3 @@ public class RolePermissionService {
         return permissions;
     }
 }
-

@@ -53,18 +53,17 @@ public class FinancialRecordController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('RECORD_READ')")
     @Operation(summary = "Get a record by id")
     public FinancialRecordResponse get(@PathVariable Long id) {
         return financialRecordService.getRecord(id);
     }
 
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('RECORD_READ')")
     @Operation(summary = "Get records with filters (ADMIN: own records; ANALYST: records created by their admin)")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "OK",
-                    content = @Content(schema = @Schema(implementation = FinancialRecordResponse.class))),
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = FinancialRecordResponse.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content)
     })
     public PagedResponse<FinancialRecordResponse> list(
@@ -74,16 +73,17 @@ public class FinancialRecordController {
             @Parameter(description = "To date (inclusive)") @RequestParam(required = false) LocalDate toDate,
             @Parameter(description = "Minimum amount") @RequestParam(required = false) BigDecimal minAmount,
             @Parameter(description = "Maximum amount") @RequestParam(required = false) BigDecimal maxAmount,
-            @ParameterObject @PageableDefault(size = 20) Pageable pageable
-    ) {
-        FinancialRecordFilter filter = new FinancialRecordFilter(type, category, fromDate, toDate, minAmount, maxAmount);
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+        FinancialRecordFilter filter = new FinancialRecordFilter(type, category, fromDate, toDate, minAmount,
+                maxAmount);
         return PagedResponse.fromPage(financialRecordService.listRecords(filter, pageable));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Update a financial record by id (ADMIN can only update their own records)")
-    public FinancialRecordResponse update(@PathVariable Long id, @Valid @RequestBody FinancialRecordUpdateRequest request) {
+    public FinancialRecordResponse update(@PathVariable Long id,
+            @Valid @RequestBody FinancialRecordUpdateRequest request) {
         return financialRecordService.updateRecord(id, request);
     }
 
@@ -97,8 +97,6 @@ public class FinancialRecordController {
     public ResponseEntity<?> delete(@PathVariable Long id) {
         financialRecordService.deleteRecord(id);
         return ResponseEntity.ok(
-                java.util.Map.of("message", "Record deleted successfully")
-        );
+                java.util.Map.of("message", "Record deleted successfully"));
     }
 }
-
