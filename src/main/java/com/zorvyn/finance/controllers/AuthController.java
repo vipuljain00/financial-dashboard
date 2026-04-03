@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -43,6 +44,9 @@ public class AuthController {
     private final CustomUserDetailsService userDetailsService;
     private final RolePermissionService rolePermissionService;
     private final RefreshTokenService refreshTokenService;
+
+    @Value("${jwt.expiration.ms}")
+    private long jwtExpirationMs;
 
     @PostMapping("/register")
     @Operation(summary = "Register a user (default role: VIEWER)")
@@ -71,8 +75,7 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of(
                         "message", "User registered successfully",
-                        "user", userResponse
-                ));
+                        "user", userResponse));
     }
 
     @PostMapping("/login")
@@ -103,7 +106,7 @@ public class AuthController {
                 .token(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
-                .expiresIn(86400L)
+                .expiresIn(jwtExpirationMs / 1000)
                 .user(userResponse)
                 .build();
 
@@ -127,8 +130,7 @@ public class AuthController {
                 "token", newAccessToken,
                 "refreshToken", newRefreshToken,
                 "tokenType", "Bearer",
-                "expiresIn", 86400L
-        ));
+                "expiresIn", jwtExpirationMs / 1000));
     }
 
     private UserResponse buildUserResponse(User user) {
@@ -148,4 +150,3 @@ public class AuthController {
                 .build();
     }
 }
-

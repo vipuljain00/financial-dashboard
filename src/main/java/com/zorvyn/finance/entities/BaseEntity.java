@@ -4,7 +4,6 @@ import com.zorvyn.finance.enums.EntityStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -12,7 +11,6 @@ import java.time.ZoneOffset;
 @MappedSuperclass
 @Getter
 @Setter
-@EntityListeners(AuditingEntityListener.class)
 public abstract class BaseEntity {
 
     @Column(name = "date_created", nullable = false, updatable = false)
