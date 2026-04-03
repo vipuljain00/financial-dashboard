@@ -36,7 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+            FilterChain filterChain) throws ServletException, IOException {
         try {
             String jwt = getJwtFromRequest(request);
 
@@ -68,12 +68,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             .collect(Collectors.toList()));
 
                     // Create authentication token
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(
-                                    email,
-                                    null,
-                                    authorities
-                            );
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            email,
+                            null,
+                            authorities);
 
                     // Set additional details
                     authentication.setDetails(userEntity);
@@ -114,22 +112,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return null;
         }
 
-        // Accept values like "Bearer <token>" (case-insensitive scheme) to be tolerant of clients.
-        // Also accept if the client already sent only the token string (no scheme).
-        // Also tolerate accidental "Bearer Bearer <token>" (double Bearer).
         String token = bearerToken.trim();
         while (token.regionMatches(true, 0, "Bearer ", 0, "Bearer ".length())) {
             token = token.substring("Bearer ".length()).trim();
         }
-        if (!token.isBlank()) {
-            // If caller provided raw token without the Bearer prefix.
-            if (token.chars().filter(ch -> ch == '.').count() == 2) {
-                return token;
-            }
-            // Might be a malformed header; treat as missing token.
+
+        token = token.replaceAll("\\s+", "");
+        if (!token.isBlank() && token.chars().filter(ch -> ch == '.').count() == 2) {
+            return token;
         }
 
         return null;
     }
 }
-

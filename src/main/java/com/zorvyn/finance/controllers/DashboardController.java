@@ -1,9 +1,10 @@
 package com.zorvyn.finance.controllers;
 
 import com.zorvyn.finance.dto.dashboard.CategoryWiseTotalResponse;
-import com.zorvyn.finance.dto.dashboard.DailyTrendResponse;
 import com.zorvyn.finance.dto.dashboard.DashboardSummaryResponse;
 import com.zorvyn.finance.dto.dashboard.RecentActivityResponse;
+import com.zorvyn.finance.dto.dashboard.TrendResponse;
+import com.zorvyn.finance.enums.TrendGranularity;
 import com.zorvyn.finance.services.DashboardService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -71,14 +72,35 @@ public class DashboardController {
         return dashboardService.summary(from, to);
     }
 
-    @GetMapping("/trends/daily")
+    @GetMapping("/trends")
     @PreAuthorize("hasAuthority('ANALYTICS_READ')")
-    @Operation(summary = "Get daily trend (both income and expense) over a date range")
-    public List<DailyTrendResponse> dailyTrend(
-            @RequestParam LocalDate from,
-            @RequestParam LocalDate to
+    @Operation(
+            summary = "Get income/expense/net trends grouped by granularity",
+            description = """
+                    Returns trend data bucketed by the specified granularity over the given date range.
+
+                    **Granularity formats:**
+                    - `DAILY`   → period: `"2025-04-01"`
+                    - `WEEKLY`  → period: `"2025-W14"` (ISO 8601, week starts Monday)
+                    - `MONTHLY` → period: `"2025-04"`
+
+                    Each bucket includes `periodStart` and `periodEnd` so frontend chart
+                    libraries can plot the X-axis without parsing the period string.
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK"),
+            @ApiResponse(responseCode = "400", description = "Invalid granularity or date params", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden", content = @Content)
+    })
+    public List<TrendResponse> trends(
+            @Parameter(description = "From date (inclusive)") @RequestParam LocalDate from,
+            @Parameter(description = "To date (inclusive)") @RequestParam LocalDate to,
+            @Parameter(description = "Aggregation granularity: DAILY, WEEKLY, or MONTHLY")
+            @RequestParam(defaultValue = "DAILY") TrendGranularity granularity
     ) {
-        return dashboardService.dailyTrend(from, to);
+        return dashboardService.trends(from, to, granularity);
     }
 }
 

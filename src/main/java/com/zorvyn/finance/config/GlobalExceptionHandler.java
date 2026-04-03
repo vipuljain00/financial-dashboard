@@ -13,6 +13,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -72,8 +73,7 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.toMap(
                         fe -> fe.getField(),
                         fe -> fe.getDefaultMessage() != null ? fe.getDefaultMessage() : "Invalid",
-                        (a, b) -> a
-                ));
+                        (a, b) -> a));
         log.warn("Validation failed: {}", details);
         ApiErrorResponse body = ApiErrorResponse.of(HttpStatus.BAD_REQUEST, "Validation failed", details);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
@@ -138,7 +138,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleDataIntegrity(DataIntegrityViolationException e) {
-        // Try to translate common unique-constraint violations into user-friendly messages.
+        // Try to translate common unique-constraint violations into user-friendly
+        // messages.
         String details = null;
         try {
             Throwable mostSpecific = e.getMostSpecificCause();
@@ -159,6 +160,23 @@ public class GlobalExceptionHandler {
 
         log.error("Data integrity violation: {}", userMessage, e);
         return build(HttpStatus.CONFLICT, userMessage);
+    }
+
+    // Spring Security exceptions — must be handled explicitly here because
+    // @RestControllerAdvice intercepts them before ExceptionTranslationFilter
+    // can delegate to JsonAccessDeniedHandler / JsonAuthenticationEntryPoint.
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException e) {
+        log.warn("Access denied: {}", e.getMessage());
+        return build(HttpStatus.FORBIDDEN, "Access denied");
+    }
+
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    public ResponseEntity<ApiErrorResponse> handleSpringAuthException(
+            org.springframework.security.core.AuthenticationException e) {
+        log.warn("Authentication required: {}", e.getMessage());
+        return build(HttpStatus.UNAUTHORIZED, "Full authentication is required to access this resource");
     }
 
     @ExceptionHandler(Exception.class)

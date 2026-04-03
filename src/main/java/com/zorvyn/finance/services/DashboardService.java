@@ -1,13 +1,14 @@
 package com.zorvyn.finance.services;
 
 import com.zorvyn.finance.dto.dashboard.CategoryWiseTotalResponse;
-import com.zorvyn.finance.dto.dashboard.DailyTrendResponse;
 import com.zorvyn.finance.dto.dashboard.DashboardSummaryResponse;
 import com.zorvyn.finance.dto.dashboard.RecentActivityResponse;
+import com.zorvyn.finance.dto.dashboard.TrendResponse;
 import com.zorvyn.finance.entities.FinancialRecord;
 import com.zorvyn.finance.entities.User;
-import com.zorvyn.finance.enums.Role;
 import com.zorvyn.finance.enums.RecordType;
+import com.zorvyn.finance.enums.Role;
+import com.zorvyn.finance.enums.TrendGranularity;
 import com.zorvyn.finance.exceptions.ForbiddenException;
 import com.zorvyn.finance.repositories.FinancialRecordRepository;
 import com.zorvyn.finance.repositories.FinancialRecordSpecifications;
@@ -19,8 +20,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.WeekFields;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -95,36 +101,70 @@ public class DashboardService {
     }
 
     @Transactional(readOnly = true)
-    public List<DailyTrendResponse> dailyTrend(LocalDate from, LocalDate to) {
+    public List<TrendResponse> trends(LocalDate from, LocalDate to, TrendGranularity granularity) {
         Long creatorId = resolveScopedCreatorId();
         var spec = FinancialRecordSpecifications.createdByUserId(creatorId)
                 .and(FinancialRecordSpecifications.transactionDateGte(normalizeFrom(from)))
                 .and(FinancialRecordSpecifications.transactionDateLte(normalizeTo(to)));
 
         List<FinancialRecord> records = financialRecordRepository.findAll(spec);
-        Map<LocalDate, BigDecimal> incomeByDate = new TreeMap<>();
-        Map<LocalDate, BigDecimal> expenseByDate = new TreeMap<>();
 
+        // TreeMap keeps buckets sorted ascending by periodStart automatically
+        Map<LocalDate, BigDecimal[]> buckets = new TreeMap<>();
         for (FinancialRecord r : records) {
-            LocalDate d = r.getTransactionDate();
+            LocalDate periodStart = resolvePeriodStart(r.getTransactionDate(), granularity);
+            BigDecimal[] sums = buckets.computeIfAbsent(periodStart, k -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
             if (r.getType() == RecordType.INCOME) {
-                incomeByDate.put(d, incomeByDate.getOrDefault(d, BigDecimal.ZERO).add(r.getAmount()));
+                sums[0] = sums[0].add(r.getAmount());
             } else if (r.getType() == RecordType.EXPENSE) {
-                expenseByDate.put(d, expenseByDate.getOrDefault(d, BigDecimal.ZERO).add(r.getAmount()));
+                sums[1] = sums[1].add(r.getAmount());
             }
         }
 
-        TreeMap<LocalDate, Boolean> dates = new TreeMap<>();
-        incomeByDate.keySet().forEach(k -> dates.put(k, true));
-        expenseByDate.keySet().forEach(k -> dates.put(k, true));
+        List<TrendResponse> result = new ArrayList<>();
+        for (Map.Entry<LocalDate, BigDecimal[]> entry : buckets.entrySet()) {
+            LocalDate periodStart = entry.getKey();
+            LocalDate periodEnd = resolvePeriodEnd(periodStart, granularity);
+            BigDecimal incomeSum = entry.getValue()[0];
+            BigDecimal expenseSum = entry.getValue()[1];
+            result.add(new TrendResponse(
+                    resolvePeriodLabel(periodStart, granularity),
+                    periodStart,
+                    periodEnd,
+                    incomeSum,
+                    expenseSum,
+                    incomeSum.subtract(expenseSum)
+            ));
+        }
+        return result;
+    }
 
-        return dates.keySet().stream()
-                .map(d -> new DailyTrendResponse(
-                        d,
-                        incomeByDate.getOrDefault(d, BigDecimal.ZERO),
-                        expenseByDate.getOrDefault(d, BigDecimal.ZERO)
-                ))
-                .toList();
+    private LocalDate resolvePeriodStart(LocalDate date, TrendGranularity granularity) {
+        return switch (granularity) {
+            case DAILY -> date;
+            case WEEKLY -> date.with(WeekFields.ISO.dayOfWeek(), DayOfWeek.MONDAY.getValue());
+            case MONTHLY -> date.withDayOfMonth(1);
+        };
+    }
+
+    private LocalDate resolvePeriodEnd(LocalDate periodStart, TrendGranularity granularity) {
+        return switch (granularity) {
+            case DAILY -> periodStart;
+            case WEEKLY -> periodStart.plusDays(6);
+            case MONTHLY -> YearMonth.from(periodStart).atEndOfMonth();
+        };
+    }
+
+    private String resolvePeriodLabel(LocalDate periodStart, TrendGranularity granularity) {
+        return switch (granularity) {
+            case DAILY -> periodStart.toString();
+            case WEEKLY -> {
+                int week = periodStart.get(WeekFields.ISO.weekOfWeekBasedYear());
+                int weekYear = periodStart.get(WeekFields.ISO.weekBasedYear());
+                yield String.format("%d-W%02d", weekYear, week);
+            }
+            case MONTHLY -> YearMonth.from(periodStart).format(DateTimeFormatter.ofPattern("yyyy-MM"));
+        };
     }
 
     private BigDecimal totalByType(RecordType type, Long creatorId, LocalDate from, LocalDate to) {
