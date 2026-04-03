@@ -1,0 +1,45 @@
+spring.application.name=finance
+
+# Server Configuration
+server.port=8080
+server.servlet.context-path=/
+
+# JWT Configuration
+# Generate a strong secret (min 32 chars for HS512). Example: openssl rand -base64 64
+jwt.secret=REPLACE_WITH_YOUR_STRONG_SECRET_MIN_32_CHARS
+jwt.expiration.ms=86400000
+jwt.refresh.expiration.ms=604800000
+jwt.header=Authorization
+jwt.prefix=Bearer
+
+# JPA/Hibernate Configuration
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.generate-ddl=true
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.open-in-view=false
+
+# Helps confirm Hibernate is running schema generation (DDL).
+logging.level.org.hibernate.tool.hbm2ddl=DEBUG
+
+# Pagination safety
+spring.data.web.pageable.max-page-size=100
+spring.data.web.pageable.default-page-size=20
+
+# PostgreSQL Database Configuration
+spring.datasource.url=jdbc:postgresql://localhost:5432/finance_db
+spring.datasource.driverClassName=org.postgresql.Driver
+spring.datasource.username=REPLACE_WITH_YOUR_DB_USERNAME
+spring.datasource.password=REPLACE_WITH_YOUR_DB_PASSWORD
+
+# Flyway
+spring.flyway.enabled=false
+
+# OpenAPI / Swagger
+springdoc.swagger-ui.path=/swagger-ui.html
+
+# Logging
+logging.level.root=INFO
+logging.level.com.zorvyn.finance=DEBUG
+logging.level.org.springframework.security=DEBUG
