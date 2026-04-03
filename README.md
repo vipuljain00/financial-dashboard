@@ -95,6 +95,11 @@ http://localhost:8080/swagger-ui.html
 
 To authenticate in Swagger: call `/api/v1/auth/login`, copy the `token` from the response, click **Authorize** (top right), and paste the token. Swagger handles the `Bearer` prefix automatically.
 
+![Auth endpoints](docs/authController.png)
+![Financial record endpoints](docs/financialRecordController.png)
+![Dashboard endpoints](docs/dashboardController.png)
+![User management endpoints](docs/userManagementController.png)
+
 ### Authentication — `/api/v1/auth` (public)
 
 | Method | Path | Description |
