@@ -40,15 +40,22 @@ Controllers handle HTTP concerns (request binding, response codes, Swagger annot
 
 ## Database Design
 
-Three primary tables:
+![ER Diagram](docs/er_diagram.png)
 
-**`users`** — stores all users regardless of role. Admins are users with `role = ADMIN`. Non-admin users have a foreign key `admin_id` pointing to the admin who created them.
+**Key design decisions:**
 
-**`financial_records`** — each record has `amount` (BigDecimal), `type` (INCOME/EXPENSE), `category`, `transaction_date`, `notes`, and a `created_by` FK to the admin who owns it. Non-admins access records through this FK — they query for records where `created_by = their admin`.
-
-**`refresh_tokens`** — stores a SHA-256 hash of the opaque refresh token, with expiry and a `used` flag for rotation. The raw token is never stored.
-
-Schema is managed via Hibernate DDL with `spring.jpa.hibernate.ddl-auto=update`.
+| Decision | Rationale |
+|----------|-----------|
+| `organizations` as root tenant | All users (admin and non-admin) belong to an organization. Non-admins are scoped to records from all admins within the same organization — not just the admin who created them. |
+| `organization_id` on `users` | Derived from admin at creation time. Enables org-wide data scoping for analysts and viewers across multiple admins. |
+| `admin_id` self-referential FK on `users` | Tracks the direct admin who created a non-admin user — retained for audit and accountability alongside `organization_id`. |
+| `amount` as `NUMERIC(19,2)` | Exact decimal arithmetic — floats are never used for money. |
+| `email` + `mobile_no` indexed and unique | Fast lookup on login; anonymized on soft-delete to preserve the unique constraint. |
+| `created_by` on `financial_record` | Always set to an admin — non-admins query records through `created_by.organization_id = their organization`. |
+| `token_hash` on `refresh_tokens` | SHA-256 of the raw opaque token; raw value is never stored. |
+| `status` on all user entities | Soft-delete support — users are set to `DELETED` with anonymized PII; financial records are hard-deleted. |
+| `date_created` / `date_updated` as `TIMESTAMPTZ` | Timezone-aware; stored in UTC via `@PrePersist` / `@PreUpdate`. |
+| Indexes on `email`, `role`, `transaction_date`, `type`, `category`, `created_by` | Covers all filter, sort, and lookup patterns used by the API. |
 
 ---
 
